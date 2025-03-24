@@ -7,6 +7,7 @@ A sleek drag-and-drop file organizer built with **Python + PyQt6**, featuring:
 - 🗽 File **preview before organizing**  
 - 📊 Progress bar and logging  
 - 🌑 Dark theme UI  
+- 🪤 Fuzzy matching to group similar filenames (e.g. `Dog01`, `dog_2`, `Doggo-03`)
 
 ---
 
@@ -14,17 +15,18 @@ A sleek drag-and-drop file organizer built with **Python + PyQt6**, featuring:
 
 This tool scans a selected folder and:
 
-1. Groups files by a common prefix (e.g., everything starting with `invoice_`).
+1. Groups files by a common prefix, ignoring trailing patterns like `(01)`, `[01]`, `_01`, `-01`, and uses **fuzzy matching** to cluster similar names.
 2. Creates subfolders based on that prefix.
 3. Separates files by type within those folders.
 4. Handles duplicate files by **renaming** with a timestamp.
 
 ### 🧱 Example structure:
 ```
-📁 invoice
- └── 📁 pdf
-     ├── invoice_jan.pdf
-     └── invoice_feb.pdf
+📁 dog
+ └── 📁 jpg
+     ├── Dog01.jpg
+     ├── dog_2.jpg
+     └── Doggo-03.jpg
 ```
 
 ---
@@ -55,6 +57,7 @@ python organizer_gui.py
 - Drag-and-drop folder support
 - Manual folder selection
 - Live preview of files
+- Smart grouping using fuzzy match
 - Rename duplicate files automatically
 - Dark theme for comfy vibes
 - Live log of actions
@@ -78,4 +81,6 @@ pyinstaller --noconsole --onefile organizer_gui.py
 - Scheduling and automation
 - Sorting rules customization
 - Light/dark theme toggle
+- Undo organization actions
+- Manual review before finalizing moves
 
