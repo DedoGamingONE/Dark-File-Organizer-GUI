@@ -8,10 +8,34 @@ import json
 from difflib import get_close_matches
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton,
-    QListWidget, QFileDialog, QProgressBar, QTextEdit, QMessageBox, QCheckBox
+    QListWidget, QFileDialog, QProgressBar, QTextEdit, QMessageBox, QCheckBox,
+    QDialog, QFormLayout, QLineEdit, QSpinBox, QDialogButtonBox
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPalette, QColor
+
+class SettingsDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Sorting Settings")
+        self.setGeometry(300, 300, 300, 150)
+        layout = QFormLayout()
+
+        self.similarity_cutoff = QSpinBox()
+        self.similarity_cutoff.setRange(50, 100)
+        self.similarity_cutoff.setValue(int(parent.similarity_cutoff * 100))
+        layout.addRow("Similarity Cutoff (%)", self.similarity_cutoff)
+
+        self.naming_pattern = QLineEdit()
+        self.naming_pattern.setText(parent.naming_pattern)
+        layout.addRow("Naming Regex", self.naming_pattern)
+
+        self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        layout.addWidget(self.buttons)
+
+        self.setLayout(layout)
 
 class FileOrganizerGUI(QMainWindow):
     def __init__(self):
@@ -23,6 +47,10 @@ class FileOrganizerGUI(QMainWindow):
         self.undo_log = []
         self.manual_review = True
 
+        # Settings
+        self.similarity_cutoff = 0.85
+        self.naming_pattern = r"[\s_\-]*(\(\d+\)|\[\d+\]|\d+)$"
+
         # Dark theme
         palette = QPalette()
         palette.setColor(QPalette.ColorRole.Window, QColor("#2b2b2b"))
@@ -31,7 +59,6 @@ class FileOrganizerGUI(QMainWindow):
         palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
         self.setPalette(palette)
 
-        # Layouts and widgets
         layout = QVBoxLayout()
 
         self.label = QLabel("Drag and drop a folder or click 'Browse Folder'")
@@ -65,10 +92,13 @@ class FileOrganizerGUI(QMainWindow):
         self.undo_button.clicked.connect(self.undo_last)
         layout.addWidget(self.undo_button)
 
+        self.settings_button = QPushButton("Settings")
+        self.settings_button.clicked.connect(self.open_settings)
+        layout.addWidget(self.settings_button)
+
         container = QWidget()
         container.setLayout(layout)
         self.setCentralWidget(container)
-
         self.setAcceptDrops(True)
 
     def toggle_manual_review(self, state):
@@ -100,7 +130,7 @@ class FileOrganizerGUI(QMainWindow):
 
     def extract_common_name(self, filename):
         name = filename.stem
-        name = re.sub(r"[\s_\-]*(\(\d+\)|\[\d+\]|\d+)$", "", name)
+        name = re.sub(self.naming_pattern, "", name)
         return name.strip().lower()
 
     def organize_files(self):
@@ -117,7 +147,7 @@ class FileOrganizerGUI(QMainWindow):
 
         for file in self.files:
             common = self.extract_common_name(file)
-            match = get_close_matches(common, groups.keys(), n=1, cutoff=0.85)
+            match = get_close_matches(common, groups.keys(), n=1, cutoff=self.similarity_cutoff)
             key = match[0] if match else common
             groups.setdefault(key, []).append(file)
 
@@ -158,6 +188,13 @@ class FileOrganizerGUI(QMainWindow):
         self.undo_log.clear()
         self.load_folder(str(self.folder_path))
         self.log.append("\n↩️ Undo complete.")
+
+    def open_settings(self):
+        dialog = SettingsDialog(self)
+        if dialog.exec():
+            self.similarity_cutoff = dialog.similarity_cutoff.value() / 100.0
+            self.naming_pattern = dialog.naming_pattern.text()
+            self.log.append(f"Updated settings: similarity cutoff = {self.similarity_cutoff}, regex = {self.naming_pattern}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
