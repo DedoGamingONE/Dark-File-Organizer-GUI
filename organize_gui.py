@@ -18,7 +18,7 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Sorting Settings")
-        self.setGeometry(300, 300, 300, 150)
+        self.setGeometry(300, 300, 300, 200)
         layout = QFormLayout()
 
         self.similarity_cutoff = QSpinBox()
@@ -29,6 +29,10 @@ class SettingsDialog(QDialog):
         self.naming_pattern = QLineEdit()
         self.naming_pattern.setText(parent.naming_pattern)
         layout.addRow("Naming Regex", self.naming_pattern)
+
+        self.cleanup_checkbox = QCheckBox("Delete old folder structure after organizing")
+        self.cleanup_checkbox.setChecked(parent.cleanup_old_structure)
+        layout.addRow(self.cleanup_checkbox)
 
         self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.buttons.accepted.connect(self.accept)
@@ -50,6 +54,7 @@ class FileOrganizerGUI(QMainWindow):
         # Settings
         self.similarity_cutoff = 0.85
         self.naming_pattern = r"[\s_\-]*(\(\d+\)|\[\d+\]|\d+)$"
+        self.cleanup_old_structure = False
 
         # Dark theme
         palette = QPalette()
@@ -123,10 +128,11 @@ class FileOrganizerGUI(QMainWindow):
         self.folder_path = Path(folder)
         self.label.setText(f"Selected Folder: {self.folder_path}")
         self.list_widget.clear()
-        self.files = [f for f in self.folder_path.iterdir() if f.is_file()]
+        self.files = list(self.folder_path.rglob("*"))
+        self.files = [f for f in self.files if f.is_file()]
 
         for file in self.files:
-            self.list_widget.addItem(file.name)
+            self.list_widget.addItem(str(file.relative_to(self.folder_path)))
 
     def extract_common_name(self, filename):
         name = filename.stem
@@ -173,6 +179,15 @@ class FileOrganizerGUI(QMainWindow):
                 self.log.append(f"Moved: {file.name} -> {destination.relative_to(self.folder_path)}")
                 self.progress.setValue(self.progress.value() + 1)
 
+        if self.cleanup_old_structure:
+            for item in self.folder_path.iterdir():
+                if item.is_dir() and item.name not in groups:
+                    try:
+                        shutil.rmtree(item)
+                        self.log.append(f"Deleted old folder: {item.name}")
+                    except Exception as e:
+                        self.log.append(f"Error deleting {item.name}: {e}")
+
         self.log.append("\n✅ Done organizing files!")
         self.load_folder(str(self.folder_path))
 
@@ -194,7 +209,8 @@ class FileOrganizerGUI(QMainWindow):
         if dialog.exec():
             self.similarity_cutoff = dialog.similarity_cutoff.value() / 100.0
             self.naming_pattern = dialog.naming_pattern.text()
-            self.log.append(f"Updated settings: similarity cutoff = {self.similarity_cutoff}, regex = {self.naming_pattern}")
+            self.cleanup_old_structure = dialog.cleanup_checkbox.isChecked()
+            self.log.append(f"Updated settings: similarity cutoff = {self.similarity_cutoff}, regex = {self.naming_pattern}, cleanup = {self.cleanup_old_structure}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
