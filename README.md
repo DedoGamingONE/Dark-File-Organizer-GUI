@@ -8,6 +8,9 @@ A sleek drag-and-drop file organizer built with **Python + PyQt6**, featuring:
 - 📊 Progress bar and logging  
 - 🌑 Dark theme UI  
 - 🪤 Fuzzy matching to group similar filenames (e.g. `Dog01`, `dog_2`, `Doggo-03`)
+- 🔄 Undo last organization
+- ⚖️ Manual review and confirmation before sorting
+- 💡 Custom sorting rule editor (coming soon)
 
 ---
 
@@ -19,6 +22,7 @@ This tool scans a selected folder and:
 2. Creates subfolders based on that prefix.
 3. Separates files by type within those folders.
 4. Handles duplicate files by **renaming** with a timestamp.
+5. Allows optional **manual review** and **undo** of the last operation.
 
 ### 🧱 Example structure:
 ```
@@ -59,6 +63,8 @@ python organizer_gui.py
 - Live preview of files
 - Smart grouping using fuzzy match
 - Rename duplicate files automatically
+- Manual review before confirming sort
+- Undo last organization with one click
 - Dark theme for comfy vibes
 - Live log of actions
 
@@ -79,8 +85,9 @@ pyinstaller --noconsole --onefile organizer_gui.py
 
 - Thumbnail preview for images
 - Scheduling and automation
-- Sorting rules customization
+- Sorting rules customization UI
 - Light/dark theme toggle
-- Undo organization actions
-- Manual review before finalizing moves
+- Export and import sorting presets
+- Integration with cloud storage
+- File tagging system
 
