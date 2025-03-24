@@ -11,6 +11,7 @@ A sleek drag-and-drop file organizer built with **Python + PyQt6**, featuring:
 - ⚖️ Custom rule editor via settings panel
 - 🔄 Undo last organization
 - ✅ Manual review and confirmation before sorting
+- 🗌 Recursive organization of nested folders
 
 ---
 
@@ -18,12 +19,14 @@ A sleek drag-and-drop file organizer built with **Python + PyQt6**, featuring:
 
 This tool scans a selected folder and:
 
-1. Groups files by a common prefix, ignoring trailing patterns like `(01)`, `[01]`, `_01`, `-01`, and uses **fuzzy matching** to cluster similar names.
-2. Creates subfolders based on that prefix.
-3. Separates files by type within those folders.
-4. Handles duplicate files by **renaming** with a timestamp.
-5. Allows **manual review** and **undo** of the last operation.
-6. Supports full **customization** of fuzzy similarity and file-naming regex through a **settings panel**.
+1. Recursively finds all files, including those in nested folders.
+2. Groups files by a common prefix, ignoring trailing patterns like `(01)`, `[01]`, `_01`, `-01`, and uses **fuzzy matching** to cluster similar names.
+3. Creates subfolders based on that prefix.
+4. Separates files by type within those folders.
+5. Handles duplicate files by **renaming** with a timestamp.
+6. Allows **manual review** and **undo** of the last operation.
+7. Supports full **customization** of fuzzy similarity and file-naming regex through a **settings panel**.
+8. Optionally deletes the old folder structure after organizing.
 
 ### 🧱 Example structure:
 ```
@@ -61,6 +64,7 @@ python organizer_gui.py
 
 - Drag-and-drop folder support
 - Manual folder selection
+- Recursive file scanning (nested folders included)
 - Live preview of files
 - Smart grouping using fuzzy match
 - Rename duplicate files automatically
@@ -69,6 +73,7 @@ python organizer_gui.py
 - Dark theme for comfy vibes
 - Live log of actions
 - Customizable sorting rules in Settings panel
+- Optionally delete old folder tree after sorting
 
 ---
 
