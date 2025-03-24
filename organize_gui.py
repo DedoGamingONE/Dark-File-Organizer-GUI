@@ -4,13 +4,14 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 import re
+import json
+from difflib import get_close_matches
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton,
-    QListWidget, QFileDialog, QProgressBar, QTextEdit
+    QListWidget, QFileDialog, QProgressBar, QTextEdit, QMessageBox, QCheckBox
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPalette, QColor
-from difflib import get_close_matches
 
 class FileOrganizerGUI(QMainWindow):
     def __init__(self):
@@ -19,6 +20,8 @@ class FileOrganizerGUI(QMainWindow):
         self.setGeometry(100, 100, 800, 600)
         self.folder_path = None
         self.files = []
+        self.undo_log = []
+        self.manual_review = True
 
         # Dark theme
         palette = QPalette()
@@ -45,6 +48,11 @@ class FileOrganizerGUI(QMainWindow):
         self.log.setReadOnly(True)
         layout.addWidget(self.log)
 
+        self.manual_checkbox = QCheckBox("Manual review before organizing")
+        self.manual_checkbox.setChecked(True)
+        self.manual_checkbox.stateChanged.connect(self.toggle_manual_review)
+        layout.addWidget(self.manual_checkbox)
+
         self.browse_button = QPushButton("Browse Folder")
         self.browse_button.clicked.connect(self.browse_folder)
         layout.addWidget(self.browse_button)
@@ -53,11 +61,18 @@ class FileOrganizerGUI(QMainWindow):
         self.organize_button.clicked.connect(self.organize_files)
         layout.addWidget(self.organize_button)
 
+        self.undo_button = QPushButton("Undo Last Organization")
+        self.undo_button.clicked.connect(self.undo_last)
+        layout.addWidget(self.undo_button)
+
         container = QWidget()
         container.setLayout(layout)
         self.setCentralWidget(container)
 
         self.setAcceptDrops(True)
+
+    def toggle_manual_review(self, state):
+        self.manual_review = bool(state)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -84,19 +99,9 @@ class FileOrganizerGUI(QMainWindow):
             self.list_widget.addItem(file.name)
 
     def extract_common_name(self, filename):
-        # Remove common trailing patterns like (01), [01], _01, -01
         name = filename.stem
         name = re.sub(r"[\s_\-]*(\(\d+\)|\[\d+\]|\d+)$", "", name)
         return name.strip().lower()
-
-    def group_similar_names(self, file_list):
-        groups = {}
-        for file in file_list:
-            common = self.extract_common_name(file)
-            match = get_close_matches(common, groups.keys(), n=1, cutoff=0.85)
-            key = match[0] if match else common
-            groups.setdefault(key, []).append(file)
-        return groups
 
     def organize_files(self):
         if not self.folder_path:
@@ -106,28 +111,53 @@ class FileOrganizerGUI(QMainWindow):
         total = len(self.files)
         self.progress.setMaximum(total)
         self.progress.setValue(0)
+        self.undo_log.clear()
 
-        grouped = self.group_similar_names(self.files)
-        count = 0
-        for base, files in grouped.items():
-            for file in files:
+        groups = {}
+
+        for file in self.files:
+            common = self.extract_common_name(file)
+            match = get_close_matches(common, groups.keys(), n=1, cutoff=0.85)
+            key = match[0] if match else common
+            groups.setdefault(key, []).append(file)
+
+        for i, (group_name, file_list) in enumerate(groups.items()):
+            for file in file_list:
                 ext = file.suffix.lstrip('.')
-                base_folder = self.folder_path / base / ext
-                base_folder.mkdir(parents=True, exist_ok=True)
-                dest = base_folder / file.name
+                target_folder = self.folder_path / group_name / ext
+                target_folder.mkdir(parents=True, exist_ok=True)
+                destination = target_folder / file.name
 
-                if dest.exists():
+                if destination.exists():
                     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-                    dest = base_folder / f"{file.stem}_{timestamp}{file.suffix}"
-                    self.log.append(f"Renamed: {file.name} -> {dest.name}")
+                    destination = target_folder / f"{file.stem}_{timestamp}{file.suffix}"
 
-                shutil.move(str(file), str(dest))
-                self.log.append(f"Moved: {file.name} -> {dest.relative_to(self.folder_path)}")
-                count += 1
-                self.progress.setValue(count)
+                if self.manual_review:
+                    reply = QMessageBox.question(self, "Move File", f"Move {file.name} to {destination.relative_to(self.folder_path)}?",
+                                                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                    if reply != QMessageBox.StandardButton.Yes:
+                        continue
+
+                shutil.move(str(file), str(destination))
+                self.undo_log.append((destination, file))
+                self.log.append(f"Moved: {file.name} -> {destination.relative_to(self.folder_path)}")
+                self.progress.setValue(self.progress.value() + 1)
 
         self.log.append("\n✅ Done organizing files!")
         self.load_folder(str(self.folder_path))
+
+    def undo_last(self):
+        if not self.undo_log:
+            self.log.append("Nothing to undo.")
+            return
+
+        for dest, original in reversed(self.undo_log):
+            shutil.move(str(dest), str(original))
+            self.log.append(f"Undone: {dest.name} -> {original.name}")
+
+        self.undo_log.clear()
+        self.load_folder(str(self.folder_path))
+        self.log.append("\n↩️ Undo complete.")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
