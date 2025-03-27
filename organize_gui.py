@@ -139,7 +139,6 @@ class FileOrganizerGUI(QMainWindow):
         name = re.sub(self.naming_pattern, "", name)
         return name.strip().lower()
 
-
     def organize_files(self):
         if not self.folder_path:
             self.log.append("No folder selected.")
