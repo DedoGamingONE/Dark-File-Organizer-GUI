@@ -134,10 +134,10 @@ class FileOrganizerGUI(QMainWindow):
             self.list_widget.addItem(str(file.relative_to(self.folder_path)))
 
     def extract_common_name(self, filename):
-    name = filename.stem
-    name = re.sub(r"[\\s\\-_]*\\(\\d+\\).*", "", name)
-    name = re.sub(self.naming_pattern, "", name)
-    return name.strip().lower()
+        name = filename.stem
+        name = re.sub(r"[\\s\\-_]*\\(\\d+\\).*", "", name)
+        name = re.sub(self.naming_pattern, "", name)
+        return name.strip().lower()
 
     def organize_files(self):
         if not self.folder_path:
